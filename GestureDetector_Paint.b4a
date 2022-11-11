@@ -1,0 +1,122 @@
+﻿Build1=Default,flm.b4a.gesturedemo
+Group=Default Group
+Library1=core
+Library2=gesturedetector
+ManifestCode=
+NumberOfFiles=0
+NumberOfLibraries=2
+NumberOfModules=0
+Version=11.8
+@EndOfDesignText@
+#Region Module Attributes
+	#FullScreen: False
+	#IncludeTitle: True
+	#ApplicationLabel: Gesture detector demo
+	#VersionCode: 1
+	#VersionName: 
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+#End Region
+
+'Activity module
+Sub Process_Globals
+	'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+	Type typPainter(LastX As Int, LastY As Int, Color As Int)
+End Sub
+
+Sub Globals
+	Dim GD As GestureDetector
+	Dim C As Canvas
+	Dim newX, newY As Int
+	Dim Painters As List
+	Dim Color(8) As Int = Array As Int(Colors.Red, Colors.Cyan, Colors.Green, Colors.Yellow, Colors.Magenta, Colors.Blue, Colors.Gray, Colors.White)
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	'Creates a label and a button
+	Dim lbl As Label
+	lbl.Initialize("")
+	lbl.Text = "Paint on the screen with one or many fingers."
+	lbl.TextColor = Colors.White
+	lbl.TextSize = 18
+	Activity.AddView(lbl, 15dip, 15dip, 100%x-30dip, 60dip)
+	Dim btn As Button
+	btn.Initialize("Clear")
+	btn.Text = "Clear"
+	btn.TextSize = 18
+	Activity.AddView(btn, 100%x - 100dip, 100%y - 60dip, 100dip, 60dip)
+
+	'Initializes the drawing canvas
+	C.Initialize(Activity)
+	C.DrawColor(Colors.Black)
+
+	'Initializes the painter list
+	Painters.Initialize
+
+	'Binds the gesture listener to the activity
+	GD.SetOnGestureListener(Activity, "Gesture")
+End Sub
+
+Sub Activity_Resume
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+End Sub
+
+Sub Gesture_onDown(X As Float, Y As Float, MotionEvent As Object)
+	'Adds the first painter to the list
+	Gesture_onPointerDown(0, 0, MotionEvent)
+End Sub
+
+Sub Gesture_onPointerDown(ptrIndex As Int, PID As Int, MotionEvent As Object)
+	'Adds a new painter to the list
+	Log("Pointer DOWN = " & ptrIndex & " PID = " & PID)
+	Dim NewPainter As typPainter
+	NewPainter.Initialize
+	NewPainter.LastX = GD.getX(MotionEvent, ptrIndex)
+	NewPainter.LastY = GD.getY(MotionEvent, ptrIndex)
+	NewPainter.Color = Color(Min(ptrIndex, 8))
+	Painters.InsertAt(ptrIndex, NewPainter)
+	C.DrawCircle(NewPainter.LastX, NewPainter.LastY, 10dip, NewPainter.Color, True, 0)
+	Activity.Invalidate
+End Sub
+
+Sub Gesture_onTouch(Action As Int, X As Float, Y As Float, MotionEvent As Object) As Boolean
+	If Action = GD.ACTION_UP Then
+		'Removes the first painter from the list
+		Gesture_onPointerUp(0, 0, MotionEvent)
+	End If
+	Return True
+End Sub
+
+Sub Gesture_onPointerUp(ptrIndex As Int, PID As Int, MotionEvent As Object)
+	'Removes this painter from the list
+	Log("Pointer UP = " & ptrIndex & " PID = " & PID)
+	Painters.RemoveAt(ptrIndex)
+End Sub
+
+Sub Gesture_onDrag(deltaX As Float, deltaY As Float, MotionEvent As Object)
+	'Draws a line for each painter between the last coordinates and the new ones
+	For p = 0 To Painters.Size - 1
+		Try
+			Dim Painter As typPainter
+			Painter = Painters.Get(p)
+			newX = GD.getX(MotionEvent, p)
+			newY = GD.getY(MotionEvent, p)
+			C.DrawLine(Painter.LastX, Painter.LastY, newX, newY, Painter.Color, 20dip)
+			C.DrawCircle(newX, newY, 10dip, Painter.Color, True, 0)
+			Painter.LastX = newX
+			Painter.LastY = newY
+			Activity.Invalidate
+		Catch
+			Log(LastException)
+		End Try
+	Next
+End Sub
+
+Sub Clear_Click
+	'Clears all drawings
+	C.DrawColor(Colors.Black)
+	Activity.Invalidate
+End Sub
